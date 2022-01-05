@@ -1,7 +1,7 @@
 const fs = require('fs-extra')
 const puppeteer = require('puppeteer')
 
-let map = fs.readFileSync('./user.json')
+let map = fs.readFileSync('./tasklist.json')
 map = JSON.parse(map)
 
 const missionTask = []
@@ -9,32 +9,31 @@ const missionTask = []
 async function launch() {
   try {
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
+      // args: ['--proxy-server=http://183.173.16.47:7890'],
     })
     const craw = async obj => {
-      if (!('url' in obj)) {
+      if (!obj.questions) {
         Object.keys(obj).forEach(key => {
           craw(obj[key])
         })
       } else {
-        missionTask.push(obj)
+        if (obj.questions.length === 0) missionTask.push(obj)
       }
     }
     craw(map)
     const handleMission = async (page, url, obj) => {
       await page.goto(url)
-      await page.setDefaultNavigationTimeout(0); 
-      // await page.waitForNavigation()
-
-      obj.questions.push(
+      const questions = []
+      questions.push(
         await page.$eval('section.test-list', el => {
-          console.log(el)
           const questions = []
           Array.prototype.forEach.call(el.children, child => {
             if (!child.querySelector('.exam-item__cnt')) return
             const question = child.querySelector('.exam-item__cnt').innerText.trim()
             const knowledge = child.querySelector('.knowledge-list').innerText.trim()
-            if (question && knowledge)
+            const img = child.querySelector('img')
+            if (question && knowledge && !img)
               questions.push({
                 question,
                 knowledge,
@@ -49,9 +48,8 @@ async function launch() {
         await page.goto(fix)
         const u = page.url()
         if (u.includes(`/02p${index}`)) {
-          obj.questions.push(
+          questions.push(
             await page.$eval('section.test-list', el => {
-              console.log(el)
               const questions = []
               Array.prototype.forEach.call(el.children, child => {
                 if (!child.querySelector('.exam-item__cnt')) return
@@ -68,16 +66,28 @@ async function launch() {
           )
           index++
           await loop(url)
-        } else page.close()
+        } else {
+          const title = await page.title()
+          if (title !== '禁止访问') {
+            console.log(1)
+            obj.questions = questions
+            fs.writeFileSync('./tasklist.json', JSON.stringify(map))
+          }
+          await page.close()
+        }
       }
-      await loop(url)
+      try {
+        await loop(url)
+      } catch (e) {
+        await page.close()
+      }
     }
 
     const handleTaskList = async () => {
       let index = 0
       while (missionTask.length !== index) {
         const promiseArr = []
-        for (let i = 0; i <= 10 && missionTask.length !== index; i++) {
+        for (let i = 0; i <= 2 && missionTask.length !== index; i++) {
           const task = async index => {
             const page = await browser.newPage()
             await page.goto(missionTask[index].url)
@@ -86,14 +96,22 @@ async function launch() {
           promiseArr.push(task(index))
           index++
         }
-        await Promise.all(promiseArr)
+        // try {
+          await Promise.all(promiseArr)
+        // } catch (error) {
+          // console.log(2)
+        // }
       }
     }
     handleTaskList()
     fs.writeFileSync('./tasklist.json', JSON.stringify(map))
   } catch (e) {
+    console.log(1)
     fs.writeFileSync('./tasklist.json', JSON.stringify(map))
   }
 }
 
-launch().catch(e => {})
+launch().catch(e => {
+  console.log(1)
+  console.log(e)
+})
