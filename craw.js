@@ -10,7 +10,7 @@ async function launch() {
   try {
     const browser = await puppeteer.launch({
       headless: true,
-      // args: ['--proxy-server=http://183.173.16.47:7890'],
+      args: ['--proxy-server=http://114.241.205.244:20000'],
     })
     const craw = async obj => {
       if (!obj.questions) {
