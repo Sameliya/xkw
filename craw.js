@@ -9,8 +9,13 @@ const missionTask = []
 async function launch() {
   try {
     const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--proxy-server=http://114.241.205.244:20000'],
+      headless: false,
+
+      defaultViewport: {
+        width: 1920,
+        height: 1080,
+      },
+      // args: ['--proxy-server=http://1.180.156.226:65001'],
     })
     const craw = async obj => {
       if (!obj.questions) {
@@ -87,7 +92,7 @@ async function launch() {
       let index = 0
       while (missionTask.length !== index) {
         const promiseArr = []
-        for (let i = 0; i <= 2 && missionTask.length !== index; i++) {
+        for (let i = 0; i <= 5 && missionTask.length !== index; i++) {
           const task = async index => {
             const page = await browser.newPage()
             await page.goto(missionTask[index].url)
@@ -97,9 +102,9 @@ async function launch() {
           index++
         }
         // try {
-          await Promise.all(promiseArr)
+        await Promise.all(promiseArr)
         // } catch (error) {
-          // console.log(2)
+        // console.log(2)
         // }
       }
     }
